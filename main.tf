@@ -3,7 +3,6 @@ provider "google" {
   region  = "us-central1"
 }
 
-# 1. Create GKE Cluster with Workload Identity enabled
 resource "google_container_cluster" "primary" {
   name     = "poc-cluster"
   location = "us-central1-a"
@@ -14,21 +13,10 @@ resource "google_container_cluster" "primary" {
   }
 }
 
-# 2. K8s Provider (Connects to the cluster we just built)
-provider "kubernetes" {
-  host  = "https://${google_container_cluster.primary.endpoint}"
-  cluster_ca_certificate = base64decode(google_container_cluster.primary.master_auth[0].cluster_ca_certificate)
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    command     = "gcloud"
-    args        = ["container", "clusters", "get-credentials", "poc-cluster", "--zone", "us-central1-a", "--print-access-token"]
-  }
-}
-
-# 3. ConfigMap & Secret
+# --- Kubernetes Resources ---
 resource "kubernetes_config_map" "app_config" {
   metadata { name = "app-config" }
-  data = { "APP_COLOR" = "blue" }
+  data = { "APP_COLOR" = "blue" } # Change this to test rollout
 }
 
 resource "kubernetes_secret" "db_pass" {
@@ -36,7 +24,6 @@ resource "kubernetes_secret" "db_pass" {
   data = { "password" = "poc-password-123" }
 }
 
-# 4. Deployment with Injection & Rollout Trigger
 resource "kubernetes_deployment" "app" {
   metadata { name = "config-poc" }
   spec {
@@ -46,14 +33,14 @@ resource "kubernetes_deployment" "app" {
       metadata {
         labels = { app = "poc" }
         annotations = {
-          # This forces a rollout if the ConfigMap changes
+          # This hash forces a restart if you change the ConfigMap
           "checksum/config" = sha256(jsonencode(kubernetes_config_map.app_config.data))
         }
       }
       spec {
         container {
           name  = "webapp"
-          image = "nginx"
+          image = "nginx:latest"
           env_from { config_map_ref { name = "app-config" } }
           env {
             name = "DB_PASSWORD"
