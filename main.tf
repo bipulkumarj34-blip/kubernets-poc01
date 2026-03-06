@@ -1,3 +1,15 @@
+terraform {
+  # This tells GitHub to store its memory in the bucket we just created
+  backend "gcs" {
+    bucket  = "devops-489010-tfstate"
+    prefix  = "terraform/state"
+  }
+  required_providers {
+    google = { source = "hashicorp/google" }
+    kubernetes = { source = "hashicorp/kubernetes" }
+  }
+}
+
 provider "google" {
   project = "devops-489010"
   region  = "us-central1"
