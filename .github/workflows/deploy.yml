@@ -11,7 +11,6 @@ jobs:
       - id: auth
         uses: google-github-actions/auth@v2
         with:
-          # Get this path from Phase 2
           workload_identity_provider: 'projects/533874521613/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
           service_account: 'k8s-admin-poc01@devops-489010.iam.gserviceaccount.com'
 
